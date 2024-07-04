@@ -1,9 +1,9 @@
 let WASM_URL = "https://cdn.jsdelivr.net/npm/gazefilter/dist/gazefilter.wasm";
 
-function setPosition(element, top, left) {
+function setPosition(element, x, y) {
     element.style.position = "absolute";
-    element.style.top = top + "px";
-    element.style.left = left + "px";
+    element.style.left = x + "px";
+    element.style.top = y + "px";
 }
 
 function addListeners() {
@@ -26,8 +26,8 @@ function addListeners() {
             document.getElementById("y").innerText = "y = " + gazePoint[1];
             setPosition(
                 document.getElementById("target"),
-                gazePoint[0] - window.screenLeft,
-                gazePoint[1] - window.screenTop
+                Math.round(gazePoint[0] - window.screenLeft),
+                Math.round(gazePoint[1] - window.screenTop)
             );
         } else {
             console.log(event.timestamp, event.eventType, event.detected);
