@@ -1,12 +1,34 @@
 let WASM_URL = "https://cdn.jsdelivr.net/npm/gazefilter/dist/gazefilter.wasm";
 
+var sessionStarted = false;
+
 function setPosition(element, x, y) {
     element.style.position = "absolute";
     element.style.left = x + "px";
     element.style.top = y + "px";
 }
 
-function addListeners() {
+function onCoordinatesPredicted(event) {
+    if (event.eventType === 2) {
+        let gazePoint = event.bestGazePoint()
+        document.getElementById("x").innerText = "x = " + gazePoint[0];
+        document.getElementById("y").innerText = "y = " + gazePoint[1];
+        setPosition(
+            document.getElementById("target"),
+            Math.round(gazePoint[0] - window.screenLeft),
+            Math.round(gazePoint[1] - window.screenTop)
+        );
+    } else {
+        console.log(event.timestamp, event.eventType, event.detected);
+    }
+}
+
+async function setUp() {
+    await gazefilter.init(WASM_URL);
+    await connectDevice();
+}
+
+async function connectDevice() {
     gazefilter.tracker.addListener("change", device => {
         if (device) {
             console.assert(gazefilter.tracker.videoElement());
@@ -19,30 +41,29 @@ function addListeners() {
         }
     });
 
-    gazefilter.tracker.addListener("filter", event => {
-        if (event.eventType === 2) {
-            let gazePoint = event.bestGazePoint()
-            document.getElementById("x").innerText = "x = " + gazePoint[0];
-            document.getElementById("y").innerText = "y = " + gazePoint[1];
-            setPosition(
-                document.getElementById("target"),
-                Math.round(gazePoint[0] - window.screenLeft),
-                Math.round(gazePoint[1] - window.screenTop)
-            );
-        } else {
-            console.log(event.timestamp, event.eventType, event.detected);
-        }
-    });
-}
-
-async function setUp() {
-    await gazefilter.init(WASM_URL);
-    await connectDevice();
-}
-
-async function connectDevice() {
     if (gazefilter.tracker.isReady()) {
         await gazefilter.tracker.connect();
+    }
+}
+
+async function sendCoordinates() {
+    // TODO
+}
+
+function onStartButtonClick(event) {
+    if (sessionStarted) {
+        sendCoordinates().then(() => {
+            event.target.innerText = "Начать сессию";
+            sessionStarted = false;
+        });
+        gazefilter.tracker.removeListener("filter", onCoordinatesPredicted)
+        window.removeEventListener("click", onMouseClick);
+    } else {
+        // visualize();
+        calibrate();
+        gazefilter.tracker.addListener("filter", onCoordinatesPredicted)
+        sessionStarted = true;
+        event.target.innerText = "Завершить сессию";
     }
 }
 
@@ -76,9 +97,6 @@ function calibrate() {
     gazefilter.tracker.addListener("calib", onCalib);
 }
 
-addListeners();
 setUp().then(() => {
-    // visualize();
-    calibrate();
-})
-
+    document.getElementById("start_button").addEventListener("click", onStartButtonClick)
+});
